@@ -1,0 +1,13 @@
+Summary,Issue Type,Description,Priority,Labels
+TC01 Dashboard page loads,Task,Open http://localhost:8000/index.html. Expected: dashboard renders with no console errors.,High,test-case
+TC02 Health endpoint,Task,GET /api/health. Expected: 200 and {status: ok}.,High,test-case
+TC03 Product list,Task,GET /api/products. Expected: 200 and 24 products.,Medium,test-case
+TC04 Model metrics,Task,"GET /api/model. Expected: 200, slope about 150, train_r2 above 0.9.",High,test-case
+TC05 Forecast valid week,Task,"GET /api/forecast?week=25. Expected: 200 and predicted_sales near 5750 (2000+150*25, give or take noise).",High,test-case
+TC06 Forecast invalid week,Task,GET /api/forecast?week=abc and week=0 and week=500. Expected: 400 each time.,High,test-case
+TC07 Create valid order,Task,"POST /api/orders with customer, email, total 99.5. Expected: 201, status Processing, new id.",High,test-case
+TC08 Reject invalid order,Task,"POST /api/orders with empty customer, email without @, total -5. Expected: 400.",High,test-case
+TC09 Order appears in list,Task,"After TC07, GET /api/orders. Expected: new order is present.",Medium,test-case
+TC10 Unknown endpoint,Task,GET /api/doesnotexist. Expected: 404.,Low,test-case
+TC11 Load test 20 users,Task,"Run OmniCart_TestPlan.jmx with 20 threads. Expected: error rate 0%, avg response under 200 ms.",High,test-case
+TC12 Load test 100 users,Task,"Set threads to 100, ramp-up 10s. Expected: error rate under 1%, record avg and 95th percentile.",High,test-case

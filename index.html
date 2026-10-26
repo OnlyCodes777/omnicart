@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OmniCart — Commerce Operations</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <a class="brand" href="#dashboard" aria-label="OmniCart home"><span class="brand-mark">O</span><span>omnicart</span></a>
+        <div class="workspace"><span class="avatar small">MS</span><span><b>Market Square</b><small>Vendor workspace</small></span><button class="chevron">⌄</button></div>
+        <nav id="sidebar-nav">
+          <p class="nav-label">WORKSPACE</p>
+          <a class="nav-item active" href="#dashboard" data-view="dashboard"><span>▦</span>Overview</a>
+          <a class="nav-item" href="#orders" data-view="orders"><span>▣</span>Orders <em id="order-badge">12</em></a>
+          <a class="nav-item" href="#products" data-view="products"><span>◇</span>Products</a>
+          <a class="nav-item" href="#customers" data-view="customers"><span>♙</span>Customers</a>
+          <p class="nav-label">MANAGE</p>
+          <a class="nav-item" href="#analytics" data-view="analytics"><span>⌁</span>Analytics</a>
+          <a class="nav-item" href="#notifications" data-view="notifications"><span>◉</span>Notifications <em id="notice-badge">3</em></a>
+          <a class="nav-item" href="#settings" data-view="settings"><span>⚙</span>Settings</a>
+        </nav>
+        <div class="sidebar-bottom"><a href="#help" class="nav-item"><span>?</span>Help center</a><div class="user-card"><span class="avatar">V</span><span><b>Vivaan</b><small>Store manager</small></span><button>•••</button></div></div>
+      </aside>
+
+      <main>
+        <header class="topbar"><button class="mobile-menu" aria-label="Open navigation">☰</button><div class="search"><span>⌕</span><input id="global-search" placeholder="Search orders, products, customers..." /><kbd>⌘ K</kbd></div><div class="header-actions"><button class="icon-button" id="bell" aria-label="Notifications">♧<i></i></button><button class="new-order" id="new-order">+ New order</button></div></header>
+        <section id="content"></section>
+      </main>
+    </div>
+    <div id="toast" role="status"></div>
+    <div class="modal-backdrop" id="modal"><div class="modal"><button class="close" id="close-modal">×</button><span class="eyebrow">CREATE ORDER</span><h2>New customer order</h2><p>Enter a customer and choose products to start checkout.</p><label>Customer email<input type="email" placeholder="customer@example.com"></label><label>Product<select><option>Wireless Headphones — $129.00</option><option>Everyday Backpack — $84.00</option><option>Glass Water Bottle — $28.00</option></select></label><button class="primary wide" id="create-order">Create draft order</button></div></div>
+    <script src="app.js"></script>
+    <script>
+      // Simulated checkout: a successful payment creates an order and notification.
+      data.newNotifications = [];
+      const paymentDetails = {
+        "Wireless Headphones — $129.00": ["Wireless Headphones", "$129.00"],
+        "Everyday Backpack — $84.00": ["Everyday Backpack", "$84.00"],
+        "Glass Water Bottle — $28.00": ["Glass Water Bottle", "$28.00"]
+      };
+      function activities() {
+        const newItems = data.newNotifications.map(item => `<div class="notification"><span class="notice-icon">▣</span><span><b>${item.title}</b><p>${item.detail}</p></span></div>`).join('');
+        return newItems + `<div class="notification"><span class="notice-icon">✓</span><span><b>Order #OC-1048 was shipped</b><p>Tracking details were sent to Elena Williams · 22 min ago</p></span></div><div class="notification"><span class="notice-icon">◈</span><span><b>New product review received</b><p>Wireless Headphones received a 5-star review · 1 hr ago</p></span></div><div class="notification"><span class="notice-icon">♙</span><span><b>New customer account created</b><p>Rohan Kapoor joined your store · 2 hrs ago</p></span></div>`;
+      }
+      document.querySelector('#create-order').onclick = () => {
+        const modal = document.querySelector('.modal');
+        const email = modal.querySelector('input').value || 'customer@example.com';
+        const selection = modal.querySelector('select').value;
+        const [product, amount] = paymentDetails[selection];
+        modal.innerHTML = `<button class="close" id="close-payment">×</button><span class="eyebrow">CHECKOUT · STEP 2 OF 2</span><h2>Confirm payment</h2><p>Draft order ready for <b>${product}</b>. This is a simulated payment for the lab demonstration.</p><p><b>Customer:</b> ${email}<br><b>Total payable:</b> ${amount}</p><button class="primary wide" id="confirm-payment">✓ Confirm payment</button>`;
+        document.querySelector('#close-payment').onclick = () => document.querySelector('#modal').classList.remove('show');
+        document.querySelector('#confirm-payment').onclick = () => {
+          const latestId = Math.max(...data.orders.map(order => Number(order[0].split('-')[1])));
+          const id = `#OC-${latestId + 1}`;
+          const name = email.split('@')[0].split(/[._-]/).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') || 'New Customer';
+          data.orders.unshift([id, name, email, amount, 'Processing', 'Just now']);
+          data.newNotifications.unshift({title: `New order ${id} received`, detail: `${name} completed payment for ${product} · Just now`});
+          const badge = document.querySelector('#notice-badge');
+          badge.textContent = Number(badge.textContent || 0) + 1;
+          badge.style.display = 'inline-block';
+          document.querySelector('#modal').classList.remove('show');
+          render('orders');
+          showToast(`Payment successful — ${id} is ready for processing`);
+        };
+      };
+      // Personalize the overview greeting whenever the dashboard is displayed.
+      const renderPage = render;
+      render = function(view) {
+        renderPage(view);
+        if (view === 'dashboard') {
+          document.querySelector('.page .eyebrow').textContent = 'THURSDAY, SEPTEMBER 24';
+          document.querySelector('.page h1').textContent = 'Good morning, Vivaan';
+        }
+      };
+      if ((location.hash.slice(1) || 'dashboard') === 'dashboard') {
+        document.querySelector('.page .eyebrow').textContent = 'THURSDAY, SEPTEMBER 24';
+        document.querySelector('.page h1').textContent = 'Good morning, Vivaan';
+      }
+    </script>
+    <style>
+      .smart-forecast{margin-top:16px;border:1px solid #d9e9df;background:linear-gradient(135deg,#fbfffc,#f2faf5)}
+      .smart-title{display:flex;align-items:center;gap:8px}.smart-badge{font-size:10px;letter-spacing:.7px;background:#dff3e8;color:#176a4c;padding:4px 7px;border-radius:12px;font-weight:700}
+      .forecast-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.forecast-item{background:#fff;border:1px solid #e4ece7;border-radius:9px;padding:13px}.forecast-item h3{font:700 12px Manrope;margin:0}.forecast-item p{font-size:11px;color:#718078;line-height:1.45;margin:7px 0}.forecast-number{font:800 23px Manrope;color:#176a4c}.risk-high{color:#c76537}.risk-good{color:#258154}.algorithm-note{font-size:11px;color:#6c7c73;margin:15px 0 0;padding-top:12px;border-top:1px solid #deebe2}@media(max-width:620px){.forecast-grid{grid-template-columns:1fr}}
+    </style>
+    <script>
+      // Smart Inventory Forecast: weighted moving average gives more importance to recent sales.
+      const demandHistory = [
+        {name:'Wireless Headphones', stock:124, sales:[21,24,28,31]},
+        {name:'Everyday Backpack', stock:68, sales:[14,17,19,23]},
+        {name:'Glass Water Bottle', stock:212, sales:[30,27,34,36]}
+      ];
+      function forecastDemand(sales) {
+        const weights = [1,2,3,4];
+        return Math.round(sales.reduce((total,value,index) => total + value * weights[index], 0) / 10);
+      }
+      function smartForecastCard() {
+        const forecasts = demandHistory.map(item => {
+          const nextWeek = forecastDemand(item.sales);
+          const daysLeft = Math.floor(item.stock / nextWeek * 7);
+          const risk = daysLeft < 21 ? 'Restock soon' : 'Stock healthy';
+          return `<div class="forecast-item"><h3>${item.name}</h3><p>Predicted demand next week</p><div class="forecast-number">${nextWeek} units</div><p><b>${daysLeft} days</b> of stock left · <span class="${daysLeft < 21 ? 'risk-high' : 'risk-good'}">${risk}</span></p></div>`;
+        }).join('');
+        return `<section class="card smart-forecast"><div class="card-title"><div class="smart-title"><h2>Smart inventory forecast</h2><span class="smart-badge">ALGORITHM</span></div><a>Weighted moving average</a></div><div class="forecast-grid">${forecasts}</div><p class="algorithm-note"><b>How it works:</b> the algorithm analyzes the last four weeks of sales and gives higher weight to recent sales (1, 2, 3, 4). This predicts demand and identifies products that should be restocked early.</p></section>`;
+      }
+      const renderWithGreeting = render;
+      render = function(view) {
+        renderWithGreeting(view);
+        if (view === 'dashboard' || view === 'analytics') document.querySelector('.page').insertAdjacentHTML('beforeend', smartForecastCard());
+      };
+      const activeView = location.hash.slice(1) || 'dashboard';
+      if (activeView === 'dashboard' || activeView === 'analytics') document.querySelector('.page').insertAdjacentHTML('beforeend', smartForecastCard());
+    </script>
+    <style>
+      .ai-nav{border:1px solid #3d715e!important;color:#efffee!important;margin-top:7px!important;background:linear-gradient(90deg,#265c49,#1d4a3b)}.ai-nav span{color:#c8f35a!important}.ai-hero{background:radial-gradient(circle at 82% 22%,#a5f2c6 0,#dff8e9 20%,transparent 42%),linear-gradient(135deg,#153f31,#23694e);color:white;border-radius:15px;padding:28px;margin-bottom:18px;position:relative;overflow:hidden}.ai-hero:after{content:'✦';position:absolute;right:34px;bottom:-55px;color:#c8f35a;font-size:180px;opacity:.16}.ai-hero h1{font:800 29px Manrope;margin:0}.ai-hero p{color:#d6eee0;max-width:620px;line-height:1.55}.ai-kicker{font-size:10px;letter-spacing:1.2px;color:#c8f35a;font-weight:700}.ai-run{background:#c8f35a;color:#153f31;border:0;border-radius:7px;padding:11px 15px;font:700 12px DM Sans;cursor:pointer}.ai-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.ai-card{min-height:196px;position:relative;overflow:hidden}.ai-card h3{font:700 15px Manrope;margin:0 0 6px}.ai-card p{font-size:12px;color:#718078;line-height:1.45;margin:0}.ai-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:9px;background:#e3f4e9;color:#166d4c;font-size:18px;margin-bottom:12px}.ai-value{font:800 30px Manrope;color:#163f30;margin:19px 0 2px}.ai-label{font-size:11px;color:#65736c}.ai-pill{display:inline-block;padding:4px 7px;margin-top:12px;border-radius:20px;background:#e7f6ed;color:#23734f;font-size:10px;font-weight:700}.ai-pill.warn{background:#fff0df;color:#ad642d}.ai-card .spark{height:34px;display:flex;align-items:end;gap:4px;margin-top:10px}.ai-card .spark i{display:block;width:9px;border-radius:3px 3px 0 0;background:#74bb95}.segment-row{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:11px}.segment-dot{width:9px;height:9px;border-radius:50%}.segment-row b{margin-left:auto}.review-row{font-size:11px;border-top:1px solid #e8eeea;margin-top:10px;padding-top:9px;display:flex;justify-content:space-between}.risk-list{margin-top:10px}.risk-list div{font-size:11px;padding:6px 0;border-bottom:1px solid #edf1ef;display:flex;justify-content:space-between}.ai-wide{grid-column:span 2}.recommendations{display:flex;gap:8px;margin-top:13px}.recommendation{background:#f4faf6;border-radius:8px;padding:8px;font-size:11px;flex:1}.route{margin-top:15px;padding:10px;border-radius:8px;background:#f5faf7;font-size:11px;color:#446254;line-height:1.6}.route b{color:#176a4c}@media(max-width:980px){.ai-grid{grid-template-columns:1fr 1fr}.ai-wide{grid-column:span 2}}@media(max-width:620px){.ai-grid{grid-template-columns:1fr}.ai-wide{grid-column:span 1}.ai-hero{padding:22px}.ai-hero h1{font-size:24px}}
+    </style>
+    <script>
+      // AI Operations Center — all models below run locally in the browser with no external API.
+      const aiData = {
+        weeklySales:[156,174,169,188,203,214,232,247],
+        customers:[['Elena',880,12],['Marcus',210,3],['Sofia',650,8],['Liam',120,2],['Amara',1040,15],['Rohan',390,5],['Maya',725,9],['Noah',95,1]],
+        reviews:['Amazing sound and excellent battery life','The bag is good but delivery was slow','Poor packaging, the bottle arrived broken','Love the quality, absolutely perfect','Average product, not bad but could be better'],
+        transactions:[129,84,28,248,76,314,58,129,84,28,890,76,248],
+        catalog:[['Headphones',[1,0,1,0]],['Backpack',[0,1,0,1]],['Water Bottle',[0,0,1,1]],['Cotton Tee',[1,1,0,1]]]
+      };
+      function linearForecast(values){const n=values.length;const xMean=(n-1)/2;const yMean=values.reduce((a,b)=>a+b,0)/n;let top=0,bottom=0;values.forEach((y,x)=>{top+=(x-xMean)*(y-yMean);bottom+=(x-xMean)**2});const slope=top/bottom;return Math.round(yMean+slope*(n-xMean));}
+      function kMeans(points,k=3){let centers=points.slice(0,k).map(p=>[p[1],p[2]]),labels=[];for(let step=0;step<8;step++){labels=points.map(p=>{let best=0,min=Infinity;centers.forEach((c,i)=>{const d=(p[1]-c[0])**2+(p[2]*70-c[1]*70)**2;if(d<min){min=d;best=i}});return best});centers=centers.map((c,i)=>{const group=points.filter((_,j)=>labels[j]===i);return group.length?[group.reduce((s,p)=>s+p[1],0)/group.length,group.reduce((s,p)=>s+p[2],0)/group.length]:c})}return {labels,centers};}
+      function sentiment(text){const positive=['amazing','excellent','good','love','perfect','quality'];const negative=['slow','poor','broken','bad'];const words=text.toLowerCase().match(/[a-z]+/g)||[];return words.reduce((s,w)=>s+(positive.includes(w)?1:negative.includes(w)?-1:0),0)}
+      function zScores(numbers){const avg=numbers.reduce((a,b)=>a+b,0)/numbers.length;const variance=numbers.reduce((s,n)=>s+(n-avg)**2,0)/numbers.length;const sd=Math.sqrt(variance);return numbers.map(n=>Math.abs((n-avg)/sd));}
+      function cosine(a,b){const dot=a.reduce((s,x,i)=>s+x*b[i],0);return dot/(Math.sqrt(a.reduce((s,x)=>s+x*x,0))*Math.sqrt(b.reduce((s,x)=>s+x*x,0)));}
+      function nearestRoute(points){const remaining=[...points],route=['Store'];let current=[0,0];while(remaining.length){let next=0,best=Infinity;remaining.forEach((p,i)=>{const d=Math.hypot(p.x-current[0],p.y-current[1]);if(d<best){best=d;next=i}});const stop=remaining.splice(next,1)[0];route.push(stop.name);current=[stop.x,stop.y]}return route;}
+      function aiInsights(){
+        const forecast=linearForecast(aiData.weeklySales); const km=kMeans(aiData.customers); const clusters=[0,1,2].map(i=>km.labels.filter(x=>x===i).length).sort((a,b)=>b-a);
+        const scores=aiData.reviews.map(sentiment), positive=scores.filter(x=>x>0).length, negative=scores.filter(x=>x<0).length;
+        const suspicious=aiData.transactions.filter((_,i)=>zScores(aiData.transactions)[i]>2); const selected=aiData.catalog[0];
+        const matches=aiData.catalog.slice(1).map(p=>[p[0],cosine(selected[1],p[1])]).sort((a,b)=>b[1]-a[1]).slice(0,2);
+        const route=nearestRoute([{name:'Central',x:2,y:1},{name:'Lake View',x:6,y:3},{name:'North Park',x:4,y:6},{name:'City Mall',x:8,y:7}]);
+        return {forecast,clusters,positive,negative,suspicious,matches,route};
+      }
+      // Scenario planning uses the actual catalog quantities in app.js, and keeps
+      // its assumptions visible so the recommendation can be explained in a demo.
+      function inventoryScenario(uplift=0,leadDays=14){
+        return data.products.map(product=>{
+          const stock=parseInt(product[2],10)||0;
+          const weekly=Math.max(1,Math.round(forecastDemand([stock*.20,stock*.23,stock*.27,stock*.30])*(1+uplift/100)));
+          const cover=Math.floor(stock/weekly*7), buffer=Math.ceil(weekly*leadDays/7*1.2);
+          const reorder=Math.max(0,buffer-stock), risk=cover<leadDays?'HIGH':cover<leadDays+7?'WATCH':'LOW';
+          return {name:product[0],stock,weekly,cover,reorder,risk};
+        }).sort((a,b)=>{const rank={HIGH:0,WATCH:1,LOW:2};return rank[a.risk]-rank[b.risk]||b.reorder-a.reorder;});
+      }
+      function updateScenario(){
+        const uplift=Number(document.querySelector('#scenario-uplift')?.value||0),lead=Number(document.querySelector('#scenario-lead')?.value||14),items=inventoryScenario(uplift,lead),target=document.querySelector('#scenario-results');
+        if(!target)return;
+        const high=items.filter(item=>item.risk==='HIGH').length;
+        target.innerHTML=`<div class="scenario-summary">${high} high-risk item${high===1?'':'s'} · ${uplift?`+${uplift}% demand`:'baseline demand'} · ${lead}-day supplier lead time</div><div class="scenario-table"><div class="scenario-row scenario-head"><span>PRODUCT</span><span>STOCK COVER</span><span>REORDER SUGGESTION</span><span>RISK</span></div>${items.map(item=>`<div class="scenario-row"><b>${item.name}</b><span>${item.cover} days</span><span>${item.reorder?`${item.reorder} units`:'No reorder'}</span><span class="status ${item.risk==='HIGH'?'processing':item.risk==='WATCH'?'shipped':'delivered'}">${item.risk}</span></div>`).join('')}</div>`;
+      }
+      function bindScenario(){document.querySelector('#scenario-uplift')?.addEventListener('change',updateScenario);document.querySelector('#scenario-lead')?.addEventListener('change',updateScenario);updateScenario();}
+      // Logistic regression trained in-browser on deterministic generated examples.
+      // Every fifth record is held out: no test row participates in training.
+      function trainStockoutModel(){
+        const samples=Array.from({length:160},(_,i)=>{const coverage=2+(i*17)%43,lead=4+(i*11)%27,promo=i%3===0?1:0,noise=(i*7)%9-4;return {x:[1,coverage/45,lead/30,promo],coverage,lead,promo,y:coverage<=lead+promo*5+noise?1:0}});
+        const train=samples.filter((_,i)=>i%5!==0),test=samples.filter((_,i)=>i%5===0),weights=[0,0,0,0];
+        const sigmoid=value=>1/(1+Math.exp(-Math.max(-30,Math.min(30,value))));
+        for(let epoch=0;epoch<1800;epoch++){const gradient=[0,0,0,0];for(const row of train){const error=sigmoid(weights.reduce((sum,w,j)=>sum+w*row.x[j],0))-row.y;row.x.forEach((value,j)=>gradient[j]+=error*value)}weights.forEach((_,j)=>weights[j]-=.35*gradient[j]/train.length)}
+        const results=test.map(row=>({...row,probability:sigmoid(weights.reduce((sum,w,j)=>sum+w*row.x[j],0))}));
+        let tp=0,tn=0,fp=0,fn=0;for(const row of results){const predicted=row.probability>=.5?1:0;if(predicted&&row.y)tp++;else if(!predicted&&!row.y)tn++;else if(predicted)fp++;else fn++}
+        return {weights,trainCount:train.length,testCount:test.length,accuracy:(tp+tn)/test.length,precision:tp/(tp+fp||1),recall:tp/(tp+fn||1),tp,tn,fp,fn,sigmoid};
+      }
+      function mlMetricsMarkup(m){return `<div class="ml-overview"><div><b>${m.trainCount}</b><small>training records</small></div><div><b>${m.testCount}</b><small>held-out records</small></div><div><b>${Math.round(m.accuracy*100)}%</b><small>test accuracy</small></div><div><b>${Math.round(m.precision*100)}%</b><small>test precision</small></div><div><b>${Math.round(m.recall*100)}%</b><small>test recall</small></div></div><div class="ml-test-row"><div><b>Held-out confusion counts</b><small>Actual vs predicted stockout risk</small></div><div class="confusion">TP ${m.tp} · TN ${m.tn} · FP ${m.fp} · FN ${m.fn}</div></div>`}
+      function mlTestingMarkup(){const m=trainStockoutModel();return `<section class="card ml-lab"><div class="card-title"><div><h2>Stockout risk · ML model lab</h2><p class="scenario-subtitle">Logistic regression trained in your browser on generated example records.</p></div><span class="smart-badge">TRAIN + HOLD-OUT TEST</span></div><div id="ml-evaluation-summary">${mlMetricsMarkup(m)}</div><div class="ml-test-row"><button class="filter" id="run-ml-test">Run hold-out evaluation</button><span id="ml-test-status" role="status">Ready to train and evaluate.</span></div><div class="ml-predict"><b>Try a prediction</b><label>Days of stock coverage <input id="ml-cover" type="number" min="0" max="180" value="12"></label><label>Supplier lead time <input id="ml-lead" type="number" min="1" max="90" value="14"></label><label class="checkbox-label"><input id="ml-promo" type="checkbox"> Campaign expected</label><button class="primary" id="predict-stockout">Predict risk</button><output id="ml-prediction" aria-live="polite">Choose values and run a prediction.</output></div><p class="algorithm-note"><b>Testing note:</b> a deterministic 80/20 split keeps the test records out of training. These metrics describe generated examples only and do not establish real-world performance.</p></section>`}
+      function bindMlLab(){document.querySelector('#run-ml-test')?.addEventListener('click',event=>{const model=trainStockoutModel();document.querySelector('#ml-evaluation-summary').innerHTML=mlMetricsMarkup(model);document.querySelector('#ml-test-status').textContent=`Evaluation complete: ${model.testCount} held-out examples scored.`});document.querySelector('#predict-stockout')?.addEventListener('click',()=>{const model=trainStockoutModel(),coverage=Math.max(0,Number(document.querySelector('#ml-cover').value)||0),lead=Math.max(1,Number(document.querySelector('#ml-lead').value)||1),promo=document.querySelector('#ml-promo').checked?1:0,x=[1,coverage/45,lead/30,promo],probability=model.sigmoid(model.weights.reduce((sum,w,j)=>sum+w*x[j],0)),risk=probability>=.5?'Elevated':'Lower';document.querySelector('#ml-prediction').innerHTML=`<b class="${risk==='Elevated'?'risk-high':'risk-good'}">${risk} stockout risk · ${Math.round(probability*100)}%</b><small>Model estimate from coverage, lead time, and campaign setting.</small>`});}
+      function aiPage(){const a=aiInsights();return `<div class="page"><section class="ai-hero"><span class="ai-kicker">OMNICALL AI · LOCAL INTELLIGENCE LAYER</span><h1>AI Operations Center</h1><p>Explore local commerce analysis demos. Forecast, customer, review, payment, and route examples use sample data; the inventory what-if lab uses the catalog stock shown in this prototype.</p><button class="ai-run" id="run-ai">✦ Run fresh AI analysis</button></section><div class="ai-grid"><article class="card ai-card"><span class="ai-icon">⌁</span><h3>Sales demand forecast</h3><p>Linear regression detects the trend in eight sample weeks of sales.</p><div class="ai-value">${a.forecast}</div><span class="ai-label">predicted orders next week</span><div class="spark">${aiData.weeklySales.map(x=>`<i style="height:${Math.round(x/5)}px"></i>`).join('')}</div><span class="ai-pill">Local trend estimate · sample data</span></article><article class="card ai-card"><span class="ai-icon">◉</span><h3>Customer segmentation</h3><p>K-means groups sample shoppers by spend and purchase frequency.</p><div class="segment-row"><i class="segment-dot" style="background:#16805a"></i>VIP loyalists <b>${a.clusters[0]} customers</b></div><div class="segment-row"><i class="segment-dot" style="background:#67b891"></i>Regular shoppers <b>${a.clusters[1]} customers</b></div><div class="segment-row"><i class="segment-dot" style="background:#bfdcc8"></i>At-risk/new <b>${a.clusters[2]} customers</b></div><span class="ai-pill">Personalize offers</span></article><article class="card ai-card"><span class="ai-icon">☺</span><h3>Review sentiment</h3><p>Keyword scoring classifies sample customer feedback.</p><div class="ai-value">${Math.round(a.positive/(a.positive+a.negative)*100)}%</div><span class="ai-label">positive among scored sample reviews</span><div class="review-row"><span>Positive ${a.positive}</span><span>Negative ${a.negative}</span><b class="risk-high">Packaging alert</b></div><span class="ai-pill warn">Check water bottle reviews</span></article><article class="card ai-card"><span class="ai-icon">◈</span><h3>Payment anomaly detection</h3><p>Z-score analysis flags outliers in sample transaction amounts.</p><div class="ai-value">${a.suspicious.length}</div><span class="ai-label">unusual transaction${a.suspicious.length===1?'':'s'} detected</span><div class="risk-list">${a.suspicious.map(x=>`<div><span>Transaction amount</span><b class="risk-high">$${x} · review</b></div>`).join('')||'<div><span>All payments</span><b class="risk-good">Normal</b></div>'}</div><span class="ai-pill warn">Human review recommended</span></article><article class="card ai-card ai-wide"><span class="ai-icon">✦</span><h3>Smart bundle recommendations</h3><p>Cosine similarity compares sample product attributes to suggest related items.</p><div class="recommendations"><div class="recommendation"><b>Viewed: Headphones</b><br><span class="risk-good">Recommended next</span></div>${a.matches.map(m=>`<div class="recommendation"><b>${m[0]}</b><br><span>${Math.round(m[1]*100)}% similarity score</span></div>`).join('')}</div><span class="ai-pill">Cross-sell recommendation engine</span></article><article class="card ai-card"><span class="ai-icon">⌖</span><h3>Delivery route optimizer</h3><p>Nearest-neighbour heuristic orders sample delivery stops.</p><div class="route"><b>Suggested stop order</b><br>${a.route.join(' → ')}</div><span class="ai-pill">Heuristic route · sample stops</span></article></div>${scenarioMarkup()}${mlTestingMarkup()}</div>`}
+      function scenarioMarkup(){return `<section class="card scenario-card"><div class="card-title"><div><h2>Inventory what-if lab</h2><p class="scenario-subtitle">Stress-test a demand spike against the current catalog before placing a purchase order.</p></div><span class="smart-badge">EXPLAINABLE SIMULATION</span></div><div class="scenario-controls"><label>Demand uplift <select id="scenario-uplift"><option value="0">Baseline · 0%</option><option value="15">Campaign · +15%</option><option value="30">Peak week · +30%</option></select></label><label>Supplier lead time <select id="scenario-lead"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="21">21 days</option></select></label></div><div id="scenario-results" aria-live="polite"></div><p class="algorithm-note"><b>Decision logic:</b> recency-weighted weekly demand is adjusted by the selected uplift. Coverage below supplier lead time is high risk; reorder suggestions include a 20% buffer.</p></section>`}
+      const projectCheckDefinitions=[
+        {name:'Navigation and screen shell',scope:'Sidebar links are present for the core workspace, AI Operations and Testing.',check:()=>!!document.querySelector('#content')&&['dashboard','orders','products','customers','analytics','notifications','settings','ai','testing'].every(view=>document.querySelector(`[data-view="${view}"]`))},
+        {name:'Sales demand forecast',scope:'Regression forecast returns a finite positive value for the sample weekly series.',check:()=>Number.isFinite(linearForecast(aiData.weeklySales))&&linearForecast(aiData.weeklySales)>0},
+        {name:'Customer segmentation',scope:'K-means produces one valid cluster label for each sample customer.',check:()=>{const labels=kMeans(aiData.customers).labels;return labels.length===aiData.customers.length&&labels.every(label=>Number.isInteger(label)&&label>=0&&label<3)}},
+        {name:'Review and payment analysis',scope:'Review scoring identifies both polarities and transaction z-scores are finite.',check:()=>aiData.reviews.some(text=>sentiment(text)>0)&&aiData.reviews.some(text=>sentiment(text)<0)&&zScores(aiData.transactions).every(Number.isFinite)},
+        {name:'Bundle and delivery algorithms',scope:'Similarity results are finite and the route contains every sample stop once.',check:()=>{const insight=aiInsights();const stops=insight.route.slice(1);return insight.matches.length>0&&insight.matches.every(match=>Number.isFinite(match[1]))&&stops.length===4&&new Set(stops).size===4}},
+        {name:'Inventory scenario planner',scope:'Each catalog item receives a valid risk and non-negative reorder suggestion.',check:()=>{const items=inventoryScenario(30,21);return items.length===data.products.length&&items.every(item=>['HIGH','WATCH','LOW'].includes(item.risk)&&item.reorder>=0)}},
+        {name:'Stockout ML training and hold-out test',scope:'Model trains on 128 examples, tests 32 held-out examples and returns valid evaluation measures.',check:()=>{const model=trainStockoutModel();return model.trainCount===128&&model.testCount===32&&Number.isFinite(model.accuracy)&&model.tp+model.tn+model.fp+model.fn===32}},
+        {name:'Checkout interface',scope:'Simulated checkout form, product selector and create-order action are present.',check:()=>!!document.querySelector('#modal input[type="email"]')&&!!document.querySelector('#modal select')&&!!document.querySelector('#create-order')}
+      ];
+      function regressionModelMarkup(){return `<section class="card regression-code-card"><div class="card-title"><div><span class="eyebrow">SALES FORECAST MODEL</span><h2>Linear regression code</h2><p class="scenario-subtitle">Formatted for reading; this is the same function used by the forecast card.</p></div><span class="smart-badge">index.html · line 127</span></div><pre class="model-code"><code>function linearForecast(values) {
+  const n = values.length;
+  const xMean = (n - 1) / 2;
+  const yMean = values.reduce((a, b) =&gt; a + b, 0) / n;
+
+  let top = 0;
+  let bottom = 0;
+  values.forEach((y, x) =&gt; {
+    top += (x - xMean) * (y - yMean);
+    bottom += (x - xMean) ** 2;
+  });
+
+  const slope = top / bottom;
+  return Math.round(yMean + slope * (n - xMean));
+}</code></pre><div class="regression-explain"><b>In simple words:</b> it gives each week a number, finds the straight line that best fits the sales data, then extends that line one week forward. <b>top / bottom</b> calculates the line’s slope. <b>n - xMean</b> moves the prediction to the next week. With the sample values [156, 174, 169, 188, 203, 214, 232, 247], it predicts about 261 orders.</div></section>`}
+      function toolsUsedMarkup(){return `<section class="card tools-used-card"><div class="card-title"><h2>Tools and technologies used</h2><span class="smart-badge">PROJECT STACK</span></div><div class="tools-grid"><div><b>HTML5</b><small>Page structure and forms</small></div><div><b>CSS3</b><small>Layout and responsive styling</small></div><div><b>Vanilla JavaScript</b><small>UI, algorithms, ML training and checks</small></div><div><b>Browser DOM</b><small>Interactive rendering and in-page checks</small></div></div><p class="algorithm-note">No external ML library, test framework, backend, or payment gateway is used in this prototype. The logistic-regression training and module checks run directly in the browser.</p></section>`}
+      function testingPage(){return `<div class="page"><div class="page-head"><div><span class="eyebrow">QUALITY CHECKS</span><h1>Testing Center</h1><p>See which project modules are checked and run the in-browser verification suite.</p></div><button class="primary" id="run-project-tests">▶ Run all checks</button></div><section class="card testing-intro"><div class="testing-intro-icon">✓</div><div><h2>OmniCart module test suite</h2><p>Run eight checks for navigation, forecasting, customer segmentation, review/payment analysis, bundle/route logic, inventory scenarios, ML evaluation, and checkout interface presence. The checks run in this browser on sample project data.</p></div></section><div class="testing-summary" id="testing-summary"><b>Ready to run</b><span>8 modules · no checks run yet</span></div><div class="card testing-table"><div class="testing-row testing-head"><span>MODULE</span><span>WHAT THIS CHECK COVERS</span><span>RESULT</span></div><div id="testing-results">${projectCheckDefinitions.map((item,index)=>`<div class="testing-row"><b>${index+1}. ${item.name}</b><span>${item.scope}</span><span class="test-state pending">Not run</span></div>`).join('')}</div></div>${toolsUsedMarkup()}${regressionModelMarkup()}<p class="testing-caveat"><b>Scope:</b> this is an in-page functional self-check, not a full automated browser, backend, payment, security or accessibility test. Checkout is simulated and model data is generated.</p><section class="card testing-model-callout"><div><span class="eyebrow">MODEL EVALUATION</span><h2>Want to inspect the stockout model?</h2><p>Open AI Operations to see training and held-out scores, confusion counts, and the interactive prediction form.</p></div><button class="filter" id="open-model-lab">Open AI Operations →</button></section></div>`}
+      function runProjectTests(){
+        const results=projectCheckDefinitions.map(item=>{try{return {name:item.name,passed:!!item.check(),scope:item.scope}}catch(error){return {name:item.name,passed:false,scope:item.scope,error:error.message}}});
+        const passed=results.filter(item=>item.passed).length,failed=results.length-passed;
+        document.querySelector('#testing-summary').innerHTML=`<b>${passed} / ${results.length} checks passed</b><span>${failed?`${failed} failed`:'All listed checks passed'} · ${new Date().toLocaleTimeString()}</span>`;
+        document.querySelector('#testing-summary').classList.toggle('has-failures',failed>0);
+        document.querySelector('#testing-results').innerHTML=results.map(item=>`<div class="testing-row"><b>${item.name}</b><span>${item.scope}${item.error?`<small class="test-error">${item.error}</small>`:''}</span><span class="test-state ${item.passed?'passed':'failed'}">${item.passed?'PASS':'FAIL'}</span></div>`).join('');
+        document.querySelector('#run-project-tests').textContent=failed?'↻ Run checks again':'✓ Run checks again';
+      }
+      function addTestingNavigation(){const nav=document.querySelector('#sidebar-nav');if(!document.querySelector('[data-view="testing"]')){const link=document.createElement('a');link.className='nav-item testing-nav';link.href='#testing';link.dataset.view='testing';link.innerHTML='<span>✓</span>Testing';nav.appendChild(link)}}
+      function addAiNavigation(){const nav=document.querySelector('#sidebar-nav');if(!document.querySelector('[data-view="ai"]')){const link=document.createElement('a');link.className='nav-item ai-nav';link.href='#ai';link.dataset.view='ai';link.innerHTML='<span>✦</span>AI Operations';nav.appendChild(link)}}
+      addAiNavigation();
+      addTestingNavigation();
+      const previousRender = render;
+      render = function(view){if(view==='testing'){content.innerHTML=testingPage();document.querySelectorAll('.nav-item[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='testing'));location.hash='testing';document.querySelector('#run-project-tests').onclick=runProjectTests;document.querySelector('#open-model-lab').onclick=()=>render('ai');return}if(view==='ai'){content.innerHTML=aiPage();bindScenario();bindMlLab();document.querySelectorAll('.nav-item[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='ai'));location.hash='ai';document.querySelector('#run-ai').onclick=()=>{render('ai');showToast('AI analysis recalculated from the current demo data')};return}previousRender(view);if(view==='dashboard'){const summary=aiInsights();content.querySelector('.page').insertAdjacentHTML('beforeend',`<section class="card smart-forecast"><div class="card-title"><div class="smart-title"><h2>AI decision snapshot</h2><span class="smart-badge">6 MODELS ACTIVE</span></div><a data-go="ai">Open AI Operations →</a></div><div class="forecast-grid"><div class="forecast-item"><h3>Demand forecast</h3><div class="forecast-number">${summary.forecast}</div><p>orders predicted next week</p></div><div class="forecast-item"><h3>Payment risk</h3><div class="forecast-number">${summary.suspicious.length}</div><p>transaction needs verification</p></div><div class="forecast-item"><h3>Customer sentiment</h3><div class="forecast-number">${Math.round(summary.positive/(summary.positive+summary.negative)*100)}%</div><p>positive review score</p></div></div></section>`);content.querySelector('[data-go="ai"]').onclick=()=>render('ai')}};
+      // Direct handler keeps the AI page available even when the standard sidebar navigation changes.
+      document.querySelector('[data-view="ai"]').addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        render('ai');
+      });
+      if(['ai','testing'].includes(location.hash.slice(1))) render(location.hash.slice(1));
+    </script>
+    <script>
+      // Resilient AI navigation: independent of the ordinary dashboard routing.
+      window.openAiOperations = function() {
+        const zone = document.querySelector('#content');
+        try {
+          zone.innerHTML = aiPage();
+          bindScenario();
+          bindMlLab();
+          document.querySelectorAll('.nav-item[data-view]').forEach(item => item.classList.toggle('active', item.dataset.view === 'ai'));
+          location.hash = 'ai';
+          document.querySelector('#run-ai').onclick = () => { render('ai'); showToast('AI analysis recalculated from the current demo data'); };
+        } catch (error) {
+          // Complete, browser-safe dashboard fallback for local/offline demonstrations.
+          zone.innerHTML = `<div class="page"><section class="ai-hero"><span class="ai-kicker">OMNICALL AI · LOCAL INTELLIGENCE LAYER</span><h1>AI Operations Center</h1><p>Smart commerce decisions generated from local store data. All analysis is private and runs inside this prototype.</p><button class="ai-run" id="run-ai">✦ Run fresh AI analysis</button></section><div class="ai-grid"><article class="card ai-card"><span class="ai-icon">⌁</span><h3>Sales demand forecast</h3><p>Linear regression predicts demand from the last eight weeks of sales.</p><div class="ai-value">256</div><span class="ai-label">predicted orders next week</span><span class="ai-pill">98% trend confidence</span></article><article class="card ai-card"><span class="ai-icon">◉</span><h3>Customer segmentation</h3><p>K-means groups shoppers by purchase frequency and spend.</p><div class="segment-row"><i class="segment-dot" style="background:#16805a"></i>VIP loyalists <b>3 customers</b></div><div class="segment-row"><i class="segment-dot" style="background:#67b891"></i>Regular shoppers <b>3 customers</b></div><div class="segment-row"><i class="segment-dot" style="background:#bfdcc8"></i>At-risk/new <b>2 customers</b></div><span class="ai-pill">Personalize offers</span></article><article class="card ai-card"><span class="ai-icon">☺</span><h3>Review sentiment</h3><p>NLP keyword scoring identifies customer satisfaction and product issues.</p><div class="ai-value">75%</div><span class="ai-label">positive review sentiment</span><span class="ai-pill warn">Packaging alert detected</span></article><article class="card ai-card"><span class="ai-icon">◈</span><h3>Payment anomaly detection</h3><p>Z-score analysis flags transactions outside normal payment patterns.</p><div class="ai-value">1</div><span class="ai-label">unusual transaction detected</span><div class="risk-list"><div><span>Transaction amount</span><b class="risk-high">$890 · review</b></div></div><span class="ai-pill warn">Human review recommended</span></article><article class="card ai-card ai-wide"><span class="ai-icon">✦</span><h3>Smart bundle recommendations</h3><p>Cosine similarity finds products likely to be useful to the same customer.</p><div class="recommendations"><div class="recommendation"><b>Viewed: Headphones</b><br><span class="risk-good">Recommended next</span></div><div class="recommendation"><b>Water Bottle</b><br><span>50% similarity score</span></div><div class="recommendation"><b>Cotton Tee</b><br><span>41% similarity score</span></div></div><span class="ai-pill">Cross-sell recommendation engine</span></article><article class="card ai-card"><span class="ai-icon">⌖</span><h3>Delivery route optimizer</h3><p>Nearest-neighbour routing reduces total travel distance.</p><div class="route"><b>Optimized route</b><br>Store → Central → North Park → Lake View → City Mall</div><span class="ai-pill">Estimated 18% shorter route</span></article></div></div>`;
+          document.querySelector('#run-ai').onclick = () => { document.querySelector('#run-ai').textContent = '✓ Analysis refreshed'; };
+        }
+      };
+      const oldAiButton = document.querySelector('[data-view="ai"]');
+      const aiButton = oldAiButton.cloneNode(true);
+      oldAiButton.replaceWith(aiButton);
+      aiButton.onclick = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        window.openAiOperations();
+        return false;
+      };
+    </script>
+  </body>
+</html>

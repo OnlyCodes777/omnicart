@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>OmniCart API Demo</title>
+<style>body{font:16px system-ui;max-width:640px;margin:2rem auto;padding:0 1rem}input,button{padding:.4rem;margin:.2rem}pre{background:#f3f3f3;padding:.8rem;overflow:auto}</style>
+<h1>OmniCart API demo</h1><p><a href="index.html">← Main dashboard</a></p>
+<h2>Sales forecast (linear regression)</h2>
+Week <input id="w" type="number" value="25"> <button onclick="fc()">Predict</button>
+<pre id="m"></pre><pre id="f"></pre>
+<h2>Create order</h2>
+<input id="c" placeholder="Customer"><input id="e" placeholder="Email"><input id="t" type="number" placeholder="Total">
+<button onclick="mk()">Create</button><pre id="o"></pre>
+<h2>Orders</h2><button onclick="ls()">Refresh</button><pre id="l"></pre>
+<script>
+const j=async(u,o)=>{const r=await fetch(u,o);return r.status+" "+JSON.stringify(await r.json(),null,1)};
+j('/api/model').then(t=>m.textContent="Model: "+t);
+fc=async()=>f.textContent=await j('/api/forecast?week='+w.value);
+mk=async()=>o.textContent=await j('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:c.value,email:e.value,total:t.value})});
+ls=async()=>l.textContent=await j('/api/orders');ls();
+</script>
